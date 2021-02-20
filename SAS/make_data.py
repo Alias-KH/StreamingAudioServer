@@ -5,7 +5,7 @@ import uuid
 import ffmpeg
 from ffprobe import FFProbe
 
-HLS_PATH = pathlib.Path('./SAS/hls')
+HLS_PATH = pathlib.Path('./SAS/audio_hls')
 SOURCE_PATH = pathlib.Path('./SAS/audio_source')
 EXTENSION = '.(flac|m4a)$'
 DB_NAME = 'AUDIO_SERVER.db'
@@ -80,12 +80,6 @@ for audio_file in audio_list:
             ffmpeg.run(out_stream)
         except ffmpeg._run.Error as e:
             print(e)
-    
-    
-    print(sql1)
-    print(sql2)
-    print(sql3)
-    print('\n')
     
 conn.commit()
 conn.close()
