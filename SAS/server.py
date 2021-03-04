@@ -1,4 +1,5 @@
 import sqlite3
+import base64
 from flask import Flask, jsonify, request, make_response, g
 
 DATABASE = 'AUDIO_SERVER.db'
@@ -28,29 +29,26 @@ def close_connection(exception):
     if db is not None:
         db.close()
 
-#APIで使う関数その1
-def make_json_not_args(list_name, statement):
-    return jsonify({list_name: get_db().execute(statement).fetchall()})
-
-#APIで使う関数その2
-def make_json_use_args(list_name, statement, args):
-    return jsonify({list_name: get_db().execute(statement, (request.args.get(args),)).fetchall()})
+#APIで使う関数
+def make_json(list_name, statement, args = None):
+    if args == None:
+        return jsonify({list_name: get_db().execute(statement).fetchall()})
+    else:
+        return jsonify({list_name: get_db().execute(statement, (request.args.get(args),)).fetchall()})
 
 #API
 @app.route('/api/<api_request>/')
 def api(api_request):
     if api_request == 'album_artist':
-        return make_json_not_args('album_artist_list', "SELECT * FROM album_artist")
-    
+        return make_json(api_request + 'list', "SELECT * FROM album_artist")
     elif api_request == 'album':
-        return make_json_use_args('album_list', "SELECT album_id, album FROM album WHERE album_artist_id =?", 'album_artist_id')
-    
+        return make_json(api_request + 'list', "SELECT album_id, album FROM album WHERE album_artist_id =?", 'album_artist_id')
     elif api_request == 'track':
-        return make_json_use_args('track_list', "SELECT track_id, title, track, disc FROM track WHERE album_id =?", 'album_id')
-    
+        return make_json(api_request + 'list', "SELECT track_id, title, track, disc FROM track WHERE album_id =?", 'album_id')
     elif api_request == 'metadata':
-        return make_json_use_args('metadata', "SELECT artist, genre, composer FROM metadata WHERE track_id =?", 'track_id')
-    
+        return make_json(api_request, "SELECT artist, genre, composer FROM metadata WHERE track_id =?", 'track_id')
+    elif api_request == 'image':
+        return jsonify({'image': base64.b64encode(open('./SAS/image_hls/' + request.args.get('album_id') + '.jpg', "rb").read()).decode('utf-8')})
     else:
         return('', 204)
 
@@ -59,7 +57,6 @@ def api(api_request):
 def response_hls(album_artist_id, album_id, track_id, file_name):
     response = make_response()
     response.data  = open('./SAS/audio_hls/' + album_artist_id + '/' + album_id + '/' + track_id + '/' + file_name, "rb").read()
-    
     if file_name == 'output.m3u8':
         response.headers['Content-Type'] = 'application/x-mpegurl'
     elif file_name == 'init.mp4':
